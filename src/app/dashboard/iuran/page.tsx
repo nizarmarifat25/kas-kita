@@ -18,22 +18,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { CalendarCheck, Check, Plus, Loader2 } from "lucide-react";
+import { CalendarCheck, Check, Plus, Loader2, Search, UserMinus } from "lucide-react";
 
 const MONTH_NAMES = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "Mei",
-  "Jun",
-  "Jul",
-  "Ags",
-  "Sep",
-  "Okt",
-  "Nov",
-  "Des",
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Ags", "Sep", "Okt", "Nov", "Des",
 ];
 
 export default function IuranPage() {
@@ -43,7 +34,12 @@ export default function IuranPage() {
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // State buat nandain cell mana yang lagi di-klik (loading per cell)
+  // 1. State buat Filter Nama
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // 2. Generate Tahun Otomatis (3 tahun ke belakang s/d 2 tahun ke depan)
+  const dynamicYears = Array.from({ length: 6 }, (_, i) => currentYear - 3 + i);
+
   const [processingCell, setProcessingCell] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -57,19 +53,38 @@ export default function IuranPage() {
     }
   };
 
-  // Reload data tiap ganti tahun
   useEffect(() => {
     loadData(selectedYear);
   }, [selectedYear]);
 
-  // Fungsi pas cell diklik
+  // 3. Fungsi Toggle dengan Validasi Sekuensial
   const handleToggle = (
-    memberId: number,
+    member: any,
     month: number,
     isCurrentlyPaid: boolean,
   ) => {
+    const memberId = member.id;
+    const monthIndex = month - 1;
+
+    // --- VALIDASI BERURUTAN ---
+    if (!isCurrentlyPaid) {
+      // Kasus: Mau melunasi bulan ini. Cek apakah bulan SEBELUMNYA sudah lunas?
+      if (month > 1 && !member.months[monthIndex - 1].isPaid) {
+        toast.error(`Bayar dulu iuran bulan ${MONTH_NAMES[monthIndex - 1]}!`);
+        return;
+      }
+    } else {
+      // Kasus: Mau membatalkan lunas bulan ini. Cek apakah bulan DEPANNYA sudah lunas?
+      // (Ga logis batalin Maret kalau April udah bayar, harus batalin dari ujung)
+      if (month < 12 && member.months[monthIndex + 1].isPaid) {
+        toast.error(`Batalin dulu iuran bulan ${MONTH_NAMES[monthIndex + 1]}!`);
+        return;
+      }
+    }
+
+    // Kalau lolos validasi, lanjut eksekusi:
     const cellKey = `${memberId}-${month}`;
-    setProcessingCell(cellKey); // Set loading spesifik di cell ini
+    setProcessingCell(cellKey);
 
     startTransition(async () => {
       const res = await toggleIuran(
@@ -79,18 +94,17 @@ export default function IuranPage() {
         isCurrentlyPaid,
       );
       if (res.success) {
-        // Biar ga kelihatan kedip, kita update state lokal juga (Optimistic Update tipis-tipis)
         setData((prev) =>
-          prev.map((member) => {
-            if (member.id === memberId) {
+          prev.map((mItem) => {
+            if (mItem.id === memberId) {
               return {
-                ...member,
-                months: member.months.map((m: any) =>
+                ...mItem,
+                months: mItem.months.map((m: any) =>
                   m.month === month ? { ...m, isPaid: !isCurrentlyPaid } : m,
                 ),
               };
             }
-            return member;
+            return mItem;
           }),
         );
         toast.success(
@@ -103,8 +117,14 @@ export default function IuranPage() {
     });
   };
 
+  // Terapkan Filter Pencarian Nama
+  const filteredData = data.filter((member) =>
+    member.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-10">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-10">
+      
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-zinc-200 pb-6">
         <div>
@@ -118,26 +138,40 @@ export default function IuranPage() {
             Iuran Bulanan
           </h1>
           <p className="text-zinc-500 mt-2 text-base">
-            Klik kotak bulan buat nandain lunas (Fix Rp 30.000 / bulan).
+            Klik kotak bulan secara berurutan buat nandain lunas.
           </p>
         </div>
+      </div>
 
-        {/* Filter Tahun */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-zinc-500">Tahun:</span>
+      {/* Toolbar Filter */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-zinc-200/80 shadow-sm">
+        {/* Pencarian Nama */}
+        <div className="relative w-full sm:w-[300px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+          <Input
+            placeholder="Cari nama anggota..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-11 rounded-xl border-zinc-200 bg-zinc-50 focus:bg-white transition-colors text-sm font-medium"
+          />
+        </div>
+
+        {/* Dropdown Tahun */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <span className="text-sm font-bold text-zinc-500 hidden sm:inline-block">Tahun:</span>
           <Select
             value={selectedYear.toString()}
             onValueChange={(val) => setSelectedYear(parseInt(val))}
           >
-            <SelectTrigger className="w-[120px] h-11 rounded-xl bg-white border-zinc-200 focus:ring-primary/20 font-bold text-zinc-900 shadow-sm">
+            <SelectTrigger className="w-full sm:w-[130px] h-11 rounded-xl bg-white border-zinc-200 focus:ring-primary/20 font-bold text-zinc-900 shadow-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="rounded-xl shadow-lg border-zinc-100">
-              {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
+              {dynamicYears.map((y) => (
                 <SelectItem
                   key={y}
                   value={y.toString()}
-                  className="font-semibold"
+                  className="font-semibold py-2.5 cursor-pointer"
                 >
                   {y}
                 </SelectItem>
@@ -153,11 +187,9 @@ export default function IuranPage() {
           <Table className="min-w-max">
             <TableHeader className="bg-zinc-50/50">
               <TableRow className="hover:bg-transparent border-zinc-200">
-                {/* Kolom Nama Sticky */}
-                <TableHead className="sticky left-0 z-20 bg-zinc-50/95 backdrop-blur-sm w-[250px] min-w-[250px] text-xs font-extrabold text-zinc-500 uppercase tracking-widest py-4 border-r border-zinc-200/50 shadow-[2px_0_10px_rgb(0,0,0,0.02)]">
+                <TableHead className="sticky left-0 z-20 bg-zinc-50/95 backdrop-blur-sm w-[100px] min-w-[100px] text-xs font-extrabold text-zinc-500 uppercase tracking-widest py-4 border-r border-zinc-200/50 shadow-[2px_0_10px_rgb(0,0,0,0.02)]">
                   Nama Anggota
                 </TableHead>
-                {/* Header Bulan */}
                 {MONTH_NAMES.map((month) => (
                   <TableHead
                     key={month}
@@ -171,7 +203,6 @@ export default function IuranPage() {
 
             <TableBody>
               {isLoading ? (
-                // Skeleton Loading
                 Array.from({ length: 5 }).map((_, idx) => (
                   <TableRow key={idx} className="border-zinc-100">
                     <TableCell className="sticky left-0 z-20 bg-white py-4 border-r border-zinc-200/50 shadow-[2px_0_10px_rgb(0,0,0,0.02)]">
@@ -187,19 +218,26 @@ export default function IuranPage() {
                     ))}
                   </TableRow>
                 ))
-              ) : data.length === 0 ? (
-                // Empty State
+              ) : filteredData.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={13}
-                    className="h-[200px] text-center text-zinc-500 font-medium"
+                    className="h-[250px] text-center"
                   >
-                    Belum ada anggota aktif bre. Tambah anggota dulu gih.
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mb-4 border border-zinc-100 shadow-sm">
+                        <UserMinus className="w-8 h-8 text-zinc-300" />
+                      </div>
+                      <h3 className="text-xl font-extrabold text-zinc-900 tracking-tight">Tidak Ada Data</h3>
+                      <p className="text-base text-zinc-500 mt-2 max-w-sm mx-auto">
+                        Anggota yang lu cari ga ketemu bre, atau belum ada anggota sama sekali.
+                      </p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
-                // Data Asli
-                data.map((member) => (
+                // Gunakan filteredData
+                filteredData.map((member) => (
                   <TableRow
                     key={member.id}
                     className="group hover:bg-zinc-50/50 transition-colors border-zinc-100"
@@ -225,9 +263,8 @@ export default function IuranPage() {
                         <TableCell key={m.month} className="p-2 text-center">
                           <button
                             disabled={isProcessing}
-                            onClick={() =>
-                              handleToggle(member.id, m.month, m.isPaid)
-                            }
+                            // Kita panggil fungsi handleToggle sambil bawa objek member keseluruhan buat divalidasi
+                            onClick={() => handleToggle(member, m.month, m.isPaid)}
                             className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition-all duration-300 ${
                               isProcessing
                                 ? "bg-zinc-100 text-zinc-400"
@@ -245,7 +282,6 @@ export default function IuranPage() {
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : m.isPaid ? (
                               <>
-                                {/* Default check, pas dihover jadi icon silang (batal) */}
                                 <Check className="w-5 h-5 block group-hover/btn:hidden" />
                                 <span className="text-[10px] font-bold hidden group-hover/btn:block">
                                   Batal
