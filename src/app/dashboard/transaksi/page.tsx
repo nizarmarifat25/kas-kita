@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useActionState, useTransition } from 'react';
 import { fetchTransactions, addTransaction, deleteTransaction } from '@/actions/transaksi';
-import { fetchCategories } from '@/actions/category'; // Ambil data kategori buat dropdown form
+import { fetchCategories } from '@/actions/category';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, ArrowRightLeft, ArrowDownRight, ArrowUpRight, Inbox, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ArrowRightLeft, ArrowDownRight, ArrowUpRight, Inbox, Loader2, Lock } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
 
 function SubmitButton() {
@@ -123,32 +123,54 @@ export default function TransaksiPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((item) => (
-                <TableRow key={item.id} className="group hover:bg-zinc-50/50 transition-colors border-zinc-100">
-                  <TableCell className="py-4 pl-6 text-sm text-zinc-500 font-medium">
-                    {new Date(item.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </TableCell>
-                  <TableCell className="py-4">
-                    <p className="font-bold text-zinc-900 text-base">{item.description}</p>
-                  </TableCell>
-                  <TableCell className="py-4">
-                    <span className="text-xs font-bold text-zinc-500 bg-zinc-100 px-2.5 py-1 rounded-md border border-zinc-200/50">
-                      {item.categoryName || 'Tanpa Kategori'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="py-4 text-right">
-                    <div className={`inline-flex items-center gap-1.5 font-bold text-base ${item.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {item.type === 'income' ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
-                      Rp {item.amount.toLocaleString('id-ID')}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right pr-6 py-4">
-                    <Button variant="ghost" size="icon" onClick={() => setDeletingItem(item)} className="h-8 w-8 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              data.map((item) => {
+                // Deteksi otomatis kalau ini transaksi iuran dari sistem
+                const isIuranSistem = item.description.startsWith('Iuran Bln');
+
+                return (
+                  <TableRow key={item.id} className="group hover:bg-zinc-50/50 transition-colors border-zinc-100">
+                    <TableCell className="py-4 pl-6 text-sm text-zinc-500 font-medium" suppressHydrationWarning>
+                      {new Date(item.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <p className="font-bold text-zinc-900 text-base flex items-center gap-2">
+                        {item.description}
+                      </p>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <span className="text-xs font-bold text-zinc-500 bg-zinc-100 px-2.5 py-1 rounded-md border border-zinc-200/50">
+                        {item.categoryName || 'Tanpa Kategori'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-4 text-right">
+                      <div className={`inline-flex items-center gap-1.5 font-bold text-base ${item.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {item.type === 'income' ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                        Rp {item.amount.toLocaleString('id-ID')}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right pr-6 py-4">
+                      {isIuranSistem ? (
+                        // Kalau iuran, tampilin badge Lock
+                        <div className="flex justify-end">
+                          <span className="inline-flex items-center gap-1 bg-zinc-100 text-zinc-400 text-[10px] font-bold px-2 py-1 rounded border border-zinc-200/60 uppercase tracking-widest cursor-not-allowed" title="Dikelola dari menu Iuran Bulanan">
+                            <Lock className="w-3 h-3" /> Auto
+                          </span>
+                        </div>
+                      ) : (
+                        // Kalau transaksi manual, tampilin tombol hapus yang SELALU VISIBLE
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setDeletingItem(item)} 
+                          className="h-8 w-8 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
