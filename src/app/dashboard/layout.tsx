@@ -110,27 +110,11 @@ export default async function DashboardLayout({
         </header>
 
         {/* TOP HEADER DESKTOP */}
-        <header className="hidden lg:flex items-center justify-between px-8 py-3.5 bg-white/80 backdrop-blur-xl border-b border-zinc-200/60 sticky top-0 z-10">
-          <div className="relative group w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
-            <input
-              type="text"
-              placeholder="Cari transaksi, anggota..."
-              className="w-full bg-zinc-100/60 border border-transparent focus:bg-white focus:border-primary/30 focus:ring-2 focus:ring-primary/10 h-9 pl-9 pr-4 rounded-lg text-sm outline-none transition-all"
-            />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-              <kbd className="hidden sm:inline-block bg-white border border-zinc-200 rounded px-1.5 py-0.5 text-[9px] font-bold text-zinc-400">
-                Ctrl+K
-              </kbd>
-            </div>
-          </div>
+        <header className="hidden lg:flex items-center justify-end px-8 py-3.5 bg-white/80 backdrop-blur-xl border-b border-zinc-200/60 sticky top-0 z-10">
+         
 
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-zinc-400 hover:text-zinc-700 transition-colors group">
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
-              <Bell className="w-4 h-4 group-hover:animate-[wiggle_1s_ease-in-out_infinite]" />
-            </button>
-            <div className="h-5 w-px bg-zinc-200" />
+           
             <button className="flex items-center gap-2.5 hover:bg-zinc-50 py-1.5 px-2.5 rounded-lg transition-colors group border border-transparent hover:border-zinc-200">
               <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
                 {session.user?.name?.charAt(0) || "U"}
@@ -138,7 +122,6 @@ export default async function DashboardLayout({
               <span className="text-xs font-semibold text-zinc-700">
                 {session.user?.name}
               </span>
-              <ChevronDown className="w-3 h-3 text-zinc-400 group-hover:translate-y-0.5 transition-transform" />
             </button>
           </div>
         </header>

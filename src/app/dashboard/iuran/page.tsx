@@ -66,21 +66,6 @@ export default function IuranPage() {
     const memberId = member.id;
     const monthIndex = month - 1;
 
-    // --- VALIDASI BERURUTAN ---
-    if (!isCurrentlyPaid) {
-      // Kasus: Mau melunasi bulan ini. Cek apakah bulan SEBELUMNYA sudah lunas?
-      if (month > 1 && !member.months[monthIndex - 1].isPaid) {
-        toast.error(`Bayar dulu iuran bulan ${MONTH_NAMES[monthIndex - 1]}!`);
-        return;
-      }
-    } else {
-      // Kasus: Mau membatalkan lunas bulan ini. Cek apakah bulan DEPANNYA sudah lunas?
-      // (Ga logis batalin Maret kalau April udah bayar, harus batalin dari ujung)
-      if (month < 12 && member.months[monthIndex + 1].isPaid) {
-        toast.error(`Batalin dulu iuran bulan ${MONTH_NAMES[monthIndex + 1]}!`);
-        return;
-      }
-    }
 
     // Kalau lolos validasi, lanjut eksekusi:
     const cellKey = `${memberId}-${month}`;
